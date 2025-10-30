@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: example123
+      MYSQL_DATABASE: example
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  backend:
+    build: ./backend
+    container_name: backend
+    depends_on:
+      - db
+    environment:
+      - DB_PASSWORD=example123
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_NAME=example
+    ports:
+      - "8000:8000"
+
+  proxy:
+    build: ./nginx
+    container_name: nginx
+    depends_on:
+      - backend
+    ports:
+      - "443:443"
+      - "80:80"
+
+volumes:
+  db-data:
