@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'bitnami/kubectl:latest'   // فيها kubectl
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root' // يقدر يستخدم Docker من الـ host
+        }
+    }
 
     environment {
         DOCKERHUB_USER = 'aliwazeer'
@@ -9,6 +14,17 @@ pipeline {
     }
 
     stages {
+        stage('Install Docker CLI') {
+            steps {
+                sh '''
+                    if ! command -v docker &> /dev/null; then
+                        echo "🛠 Installing Docker CLI..."
+                        apt-get update -y
+                        apt-get install -y docker.io
+                    fi
+                '''
+            }
+        }
 
         stage('Checkout Code') {
             steps {
@@ -76,14 +92,9 @@ pipeline {
         failure {
             echo '❌ Deployment Failed! Rolling back to previous version...'
             sh '''
-                PREV_BACKEND_IMAGE=$(kubectl get deployment backend -n $K8S_NAMESPACE -o=jsonpath='{.spec.template.spec.containers[0].image}')
-                PREV_PROXY_IMAGE=$(kubectl get deployment proxy -n $K8S_NAMESPACE -o=jsonpath='{.spec.template.spec.containers[0].image}')
-
-                echo "Rolling back backend to $PREV_BACKEND_IMAGE"
-                echo "Rolling back proxy to $PREV_PROXY_IMAGE"
-
-                kubectl rollout undo deployment/backend -n $K8S_NAMESPACE
-                kubectl rollout undo deployment/proxy -n $K8S_NAMESPACE
+                echo "Rolling back..."
+                kubectl rollout undo deployment/backend -n $K8S_NAMESPACE || true
+                kubectl rollout undo deployment/proxy -n $K8S_NAMESPACE || true
             '''
         }
     }
