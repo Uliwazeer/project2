@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         DOCKERHUB_USER = 'aliwazeer'
         DOCKERHUB_CREDENTIALS = credentials('dockerhub')
@@ -8,6 +9,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 echo '📦 Fetching source code...'
@@ -19,7 +21,9 @@ pipeline {
             steps {
                 echo '🚀 Building and pushing image with Kaniko...'
                 sh '''
-                    cat <<EOF > /kaniko/.docker/config.json
+                    mkdir -p /tmp/.docker
+
+                    cat <<EOF > /tmp/.docker/config.json
                     {
                         "auths": {
                             "https://index.docker.io/v1/": {
