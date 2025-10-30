@@ -1,27 +1,6 @@
 pipeline {
-    agent {
-        kubernetes {
-            label 'docker-agent'
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: jenkins-docker
-spec:
-  containers:
-    - name: docker
-      image: docker:24.0.5-dind
-      securityContext:
-        privileged: true
-      tty: true
-    - name: jnlp
-      image: jenkins/inbound-agent:latest
-      args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
-      tty: true
-"""
-        }
-    }
+    // نستخدم Agent عليه Docker CLI (label = docker)
+    agent any
 
     environment {
         DOCKERHUB_USER = 'aliwazeer'
@@ -41,36 +20,30 @@ spec:
 
         stage('Docker Login') {
             steps {
-                container('docker') {
-                    echo '🔑 Logging in to DockerHub...'
-                    sh '''
-                        echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_USER --password-stdin
-                    '''
-                }
+                echo '🔑 Logging in to DockerHub...'
+                sh '''
+                    echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_USER --password-stdin
+                '''
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                container('docker') {
-                    echo '🐳 Building Docker images...'
-                    sh '''
-                        docker build -t $DOCKERHUB_USER/backend:$IMAGE_TAG ./backend
-                        docker build -t $DOCKERHUB_USER/nginx:$IMAGE_TAG ./nginx
-                    '''
-                }
+                echo '🐳 Building Docker images...'
+                sh '''
+                    docker build -t $DOCKERHUB_USER/backend:$IMAGE_TAG ./backend
+                    docker build -t $DOCKERHUB_USER/nginx:$IMAGE_TAG ./nginx
+                '''
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                container('docker') {
-                    echo '🚀 Pushing Docker images to DockerHub...'
-                    sh '''
-                        docker push $DOCKERHUB_USER/backend:$IMAGE_TAG
-                        docker push $DOCKERHUB_USER/nginx:$IMAGE_TAG
-                    '''
-                }
+                echo '🚀 Pushing Docker images to DockerHub...'
+                sh '''
+                    docker push $DOCKERHUB_USER/backend:$IMAGE_TAG
+                    docker push $DOCKERHUB_USER/nginx:$IMAGE_TAG
+                '''
             }
         }
 
@@ -104,4 +77,4 @@ spec:
             echo '❌ Deployment Failed!'
         }
     }
-}
+}"
