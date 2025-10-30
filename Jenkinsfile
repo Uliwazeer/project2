@@ -1,10 +1,9 @@
 pipeline {
-    // نستخدم Agent عليه Docker CLI (label = docker)
     agent any
 
     environment {
         DOCKERHUB_USER = 'aliwazeer'
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // تأكد إن الـ ID ده موجود في Jenkins credentials
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
         IMAGE_TAG = "${BUILD_NUMBER}"
         K8S_NAMESPACE = 'dev'
     }
@@ -73,8 +72,19 @@ pipeline {
         success {
             echo '✅ Deployment Successful!'
         }
+
         failure {
-            echo '❌ Deployment Failed!'
+            echo '❌ Deployment Failed! Rolling back to previous version...'
+            sh '''
+                PREV_BACKEND_IMAGE=$(kubectl get deployment backend -n $K8S_NAMESPACE -o=jsonpath='{.spec.template.spec.containers[0].image}')
+                PREV_PROXY_IMAGE=$(kubectl get deployment proxy -n $K8S_NAMESPACE -o=jsonpath='{.spec.template.spec.containers[0].image}')
+
+                echo "Rolling back backend to $PREV_BACKEND_IMAGE"
+                echo "Rolling back proxy to $PREV_PROXY_IMAGE"
+
+                kubectl rollout undo deployment/backend -n $K8S_NAMESPACE
+                kubectl rollout undo deployment/proxy -n $K8S_NAMESPACE
+            '''
         }
     }
 }
