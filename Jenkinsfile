@@ -3,16 +3,26 @@ pipeline {
 
     environment {
         DOCKERHUB_USER = 'aliwazeer'
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Make sure this ID exists in Jenkins
         IMAGE_TAG = "${BUILD_NUMBER}"
         K8S_NAMESPACE = 'dev'
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 echo '📦 Fetching source code...'
                 checkout scm
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                echo '🔑 Logging in to DockerHub...'
+                sh '''
+                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_USER --password-stdin
+                '''
             }
         }
 
@@ -26,11 +36,10 @@ pipeline {
             }
         }
 
-        stage('Push Images to DockerHub') {
+        stage('Push Docker Images') {
             steps {
                 echo '🚀 Pushing Docker images to DockerHub...'
                 sh '''
-                echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_USER --password-stdin
                 docker push $DOCKERHUB_USER/backend:$IMAGE_TAG
                 docker push $DOCKERHUB_USER/nginx:$IMAGE_TAG
                 '''
@@ -57,6 +66,7 @@ pipeline {
                 '''
             }
         }
+
     }
 
     post {
@@ -68,4 +78,3 @@ pipeline {
         }
     }
 }
-
