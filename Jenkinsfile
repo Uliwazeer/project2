@@ -1,6 +1,6 @@
 pipeline {
     // نستخدم Agent عليه Docker CLI (label = docker)
-    agent any
+    agent { label 'docker' }
 
     environment {
         DOCKERHUB_USER = 'aliwazeer'
