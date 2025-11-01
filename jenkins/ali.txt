@@ -1,0 +1,166 @@
+Started by user admin
+Obtained Jenkinsfile from git https://github.com/Uliwazeer/project2.git
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on Jenkins in /var/jenkins_home/workspace/Project2-Deploy-App
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/Project2-Deploy-App/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Uliwazeer/project2.git # timeout=10
+Fetching upstream changes from https://github.com/Uliwazeer/project2.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/Uliwazeer/project2.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 78c9487e23f9fa06253ac63c1a8698b44b291f55 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 78c9487e23f9fa06253ac63c1a8698b44b291f55 # timeout=10
+Commit message: "Update Jenkinsfile"
+ > git rev-list --no-walk 9eabbda41710563af7440aaa56482bc998089041 # timeout=10
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $DOCKERHUB_CREDENTIALS or $DOCKERHUB_CREDENTIALS_PSW
+[Pipeline] {
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Checkout Code)
+[Pipeline] echo
+📦 Fetching source code...
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/Project2-Deploy-App/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/Uliwazeer/project2.git # timeout=10
+Fetching upstream changes from https://github.com/Uliwazeer/project2.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/Uliwazeer/project2.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/main^{commit} # timeout=10
+Checking out Revision 78c9487e23f9fa06253ac63c1a8698b44b291f55 (refs/remotes/origin/main)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f 78c9487e23f9fa06253ac63c1a8698b44b291f55 # timeout=10
+Commit message: "Update Jenkinsfile"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Build & Push Image)
+[Pipeline] script
+[Pipeline] {
+[Pipeline] echo
+🐳 Building Docker image inside Minikube...
+[Pipeline] sh
++ minikube docker-env
+/var/jenkins_home/workspace/Project2-Deploy-App@tmp/durable-2599fccf/script.sh.copy: 2: minikube: not found
++ eval
++ docker build -t backend:13 ./backend
+/var/jenkins_home/workspace/Project2-Deploy-App@tmp/durable-2599fccf/script.sh.copy: 3: docker: not found
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Deploy to Kubernetes)
+Stage "Deploy to Kubernetes" skipped due to earlier failure(s)
+[Pipeline] getContext
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] echo
+❌ Deployment Failed!
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+ERROR: script returned exit code 127
+Finished: FAILURE
+
+
+old but running jenkins
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      serviceAccountName: jenkins-sa   # تأكد الاسم مطابق للـServiceAccount
+      containers:
+        - name: jenkins
+          image: jenkins/jenkins:lts-jdk17
+          ports:
+            - containerPort: 8080
+            - containerPort: 50000
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          volumeMounts:
+            - name: jenkins-home
+              mountPath: /var/jenkins_home
+          # تم إزالة lifecycle مؤقتاً لتجنب CrashLoopBackOff
+      volumes:
+        - name: jenkins-home
+          persistentVolumeClaim:
+            claimName: jenkins-pvc
+
+
+
+
+
+newest file with kubeconf
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins:lts
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: kubeconfig
+          mountPath: /root/.kube
+          subPath: config
+      volumes:
+      - name: kubeconfig
+        hostPath:
+          path: /home/ali_wazeer/.kube/config   # خلي path هو المكان اللي فيه kubeconfig على الـ host
+          type: File
