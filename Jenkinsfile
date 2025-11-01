@@ -68,7 +68,7 @@ pipeline {
                         kubectl set image deployment/backend-deployment backend=backend:${IMAGE_TAG} -n $K8S_NAMESPACE
                     else
                         kubectl set image deployment/backend-deployment backend=$DOCKERHUB_USER/backend:${IMAGE_TAG} -n $K8S_NAMESPACE
-                    
+                    fi
                 '''
             }
         }
