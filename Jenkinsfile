@@ -6,7 +6,6 @@ pipeline {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub') // Jenkins credential ID
         IMAGE_TAG = "${BUILD_NUMBER}"
         K8S_NAMESPACE = 'dev'
-        USE_MINIKUBE = true  // حط false لو هتبني على DockerHub
     }
 
     stages {
@@ -18,38 +17,29 @@ pipeline {
             }
         }
 
-        stage('Build & Push Image') {
+        stage('Build & Push Image using Kaniko') {
             steps {
-                script {
-                    if (env.USE_MINIKUBE == 'true') {
-                        echo '🐳 Building Docker image inside Minikube...'
-                        sh '''
-                            eval $(minikube docker-env)
-                            docker build -t backend:${IMAGE_TAG} ./backend
-                        '''
-                    } else {
-                        echo '🚀 Building and pushing image to DockerHub using Kaniko...'
-                        sh '''
-                            mkdir -p /tmp/.docker
-
-                            cat <<EOF > /tmp/.docker/config.json
-                            {
-                                "auths": {
-                                    "https://index.docker.io/v1/": {
-                                        "auth": "$(echo -n "$DOCKERHUB_USER:$DOCKERHUB_CREDENTIALS_PSW" | base64)"
-                                    }
-                                }
+                echo '🚀 Building and pushing image with Kaniko...'
+                sh '''
+                    # إعداد ملف config.json لتسجيل الدخول على DockerHub
+                    mkdir -p /tmp/.docker
+                    cat <<EOF > /tmp/.docker/config.json
+                    {
+                        "auths": {
+                            "https://index.docker.io/v1/": {
+                                "auth": "$(echo -n "$DOCKERHUB_USER:$DOCKERHUB_CREDENTIALS_PSW" | base64)"
                             }
-                            EOF
-
-                            /kaniko/executor \
-                              --context ./backend \
-                              --dockerfile ./backend/Dockerfile \
-                              --destination $DOCKERHUB_USER/backend:$IMAGE_TAG \
-                              --cleanup
-                        '''
+                        }
                     }
-                }
+                    EOF
+
+                    # تنفيذ Kaniko لبناء ودفع الصورة
+                    /kaniko/executor \
+                      --context ./backend \
+                      --dockerfile ./backend/Dockerfile \
+                      --destination $DOCKERHUB_USER/backend:$IMAGE_TAG \
+                      --cleanup
+                '''
             }
         }
 
@@ -64,11 +54,7 @@ pipeline {
                     kubectl apply -f K8S/ -n $K8S_NAMESPACE
 
                     # تحديث صورة backend
-                    if [ "$USE_MINIKUBE" = "true" ]; then
-                        kubectl set image deployment/backend-deployment backend=backend:${IMAGE_TAG} -n $K8S_NAMESPACE
-                    else
-                        kubectl set image deployment/backend-deployment backend=$DOCKERHUB_USER/backend:${IMAGE_TAG} -n $K8S_NAMESPACE
-                    fi
+                    kubectl set image deployment/backend-deployment backend=$DOCKERHUB_USER/backend:$IMAGE_TAG -n $K8S_NAMESPACE
 
                     # الانتظار حتى ينتهي rollout
                     kubectl rollout status deployment/backend-deployment -n $K8S_NAMESPACE
