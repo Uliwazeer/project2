@@ -47,7 +47,8 @@ pipeline {
                 echo '☸️ Deploying to Kubernetes...'
                 sh '''
                     kubectl apply -f K8S/ -n $K8S_NAMESPACE
-                    kubectl set image deployment/backend backend=$DOCKERHUB_USER/backend:$IMAGE_TAG -n $K8S_NAMESPACE
+                    kubectl set image deployment/backend-deployment backend=aliwazeer/backend:${BUILD_NUMBER} -n dev
+
                 '''
             }
         }
